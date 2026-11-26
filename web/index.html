@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <!-- 한글이 깨지지 않도록 글자 인코딩을 정한다 -->
+  <meta charset="utf-8">
+  <!-- 휴대폰에서 화면 폭에 맞게 보이도록 한다 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오늘과학</title>
+  <!-- 구글 폰트 서버에 미리 연결해 글꼴을 빨리 받는다 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- 글꼴 3종: 본문·제목(IBM Plex Sans KR), 라벨·숫자(IBM Plex Mono), 손글씨(Nanum Pen Script) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Nanum+Pen+Script&display=swap">
+  <!-- 디자인(색, 글자 크기, 배치)은 style.css에 있다 -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 화면 전체를 담는 상자. 내용은 app.js가 채운다 -->
+  <main id="app">
+    <p class="status">관찰 기록을 불러오는 중이에요…</p>
+  </main>
+  <!-- 동작(데이터 읽기, 화면 그리기)은 app.js에 있다 -->
+  <script src="app.js"></script>
+</body>
+</html>
