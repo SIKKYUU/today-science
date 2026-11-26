@@ -4,7 +4,7 @@
 
 // ★ 버전: web 폴더 파일(html, css, js, 아이콘)을 고치면 이 숫자를 꼭 올린다 (v1 → v2 …)
 //   숫자가 바뀌면 아이폰이 "새 버전이 있다"는 걸 알아채고 화면 파일을 새로 받는다.
-const VERSION = "v4";
+const VERSION = "v5";
 
 // 저장소(캐시) 이름들
 const SHELL = `shell-${VERSION}`;  // 화면 파일 저장소 (버전마다 새로 만든다)

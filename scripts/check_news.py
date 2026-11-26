@@ -46,10 +46,27 @@ else:
     if not news_file.exists():
         fail(f"{news_file.name} 파일이 없어요")
     else:
-        news = json.loads(news_file.read_text(encoding="utf-8"))
+        data = json.loads(news_file.read_text(encoding="utf-8"))
+        # 형식: { "articles": [기사 10개], "more": [더 볼거리 6개] }
+        news = data.get("articles") if isinstance(data, dict) else None
         if not isinstance(news, list) or not news:
-            fail("뉴스 파일이 비어 있거나 목록 형식이 아니에요")
+            fail('뉴스 파일 형식이 { "articles": [...], "more": [...] } 가 아니거나 기사가 비어 있어요')
         else:
+            # 더 볼거리 검사: 항목마다 site, title, link(http 주소)가 있어야 한다
+            more = data.get("more", [])
+            if not isinstance(more, list):
+                fail('"more"가 목록 형식이 아니에요')
+                more = []
+            for number, item in enumerate(more, start=1):
+                if not isinstance(item, dict) or not all(item.get(key) for key in ("site", "title", "link")):
+                    fail(f"더 볼거리 {number}번에 site/title/link가 빠졌어요")
+                elif not str(item["link"]).startswith(("http://", "https://")):
+                    fail(f"더 볼거리 {number}번 링크가 http 주소가 아니에요")
+            sites = [item.get("site") for item in more if isinstance(item, dict)]
+            if sites.count("동아사이언스") != 3 or sites.count("YTN 사이언스") != 3:
+                # 후보가 모자랄 수 있으니 발행은 한다. 기록만 남긴다.
+                print(f"⚠ 더 볼거리가 동아사이언스 3개·YTN 사이언스 3개가 아니에요: {sites}")
+            data["more"] = more
             if len(news) != 10:
                 # 10개가 아니어도 발행은 한다 (본문을 못 읽어 줄었을 수 있음). 기록만 남긴다.
                 print(f"⚠ 기사 수가 10개가 아니라 {len(news)}개예요")
@@ -64,7 +81,7 @@ else:
                 chars = len(article["lead"]) + sum(len(s.get("body", "")) for s in article["sections"])
                 article["read_minutes"] = max(1, int(chars / 500 + 0.5))
             # 다시 계산한 읽는 시간을 저장한다
-            news_file.write_text(json.dumps(news, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            news_file.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # 2) 검수 메모 검사
     if not review_file.exists() or not review_file.read_text(encoding="utf-8").strip():

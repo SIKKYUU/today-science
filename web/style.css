@@ -7,6 +7,9 @@
   --ink: #1D3FAF;        /* 강조색: 잉크 파랑 */
   --marker: #FFE45C;     /* 형광펜 */
   --border: #C9D2E0;     /* 카드 테두리 */
+  --off: #8C97AA;        /* 선택 안 된 탭·책갈피 회색 */
+  --sun: #FF6B3D;        /* 앱 아이콘 해 주황 */
+  --tabbar-h: 56px;      /* 하단 탭 높이 (안전 여백 제외) */
   --radius: 2px;         /* 모서리: 거의 각지게 */
   --sans: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;  /* 본문·제목 글꼴 */
   --mono: "IBM Plex Mono", "IBM Plex Sans KR", Consolas, monospace;                /* 라벨·숫자 글꼴 (한글은 Sans KR로) */
@@ -44,7 +47,8 @@ body {
 .offline[hidden] { display: none; }  /* hidden일 때 확실히 숨긴다 */
 
 /* 내용 폭을 휴대폰 크기(최대 440px)로 맞추고 가운데 둔다 */
-#app { max-width: 440px; margin: 0 auto; padding: 20px 16px 48px; }
+/* 아래 여백은 하단 탭 높이만큼 더 둬서 마지막 내용이 탭에 가리지 않게 한다 */
+#app { max-width: 440px; margin: 0 auto; padding: 20px 16px calc(var(--tabbar-h) + 48px); }
 
 /* 불러오는 중 / 오류 안내 문구 */
 .status { color: var(--sub); text-align: center; margin-top: 40vh; }
@@ -108,8 +112,9 @@ body {
 .notice { margin: 24px 4px; color: var(--sub); }
 .memo { margin: 14px 0 18px; transform: rotate(-1.5deg); transform-origin: left; }  /* 살짝 기울인 손글씨 */
 
-/* 기사 카드 (누를 수 있는 버튼): 왼쪽 썸네일 + 오른쪽 글 */
+/* 기사 카드 (누르면 기사로): 왼쪽 썸네일 + 오른쪽 글 + 오른쪽 위 책갈피 */
 .card {
+  position: relative;                     /* 책갈피 버튼 위치 기준 */
   display: flex;                          /* 썸네일과 글을 가로로 */
   gap: 14px;                              /* 둘 사이 간격 */
   width: 100%;                            /* 꽉 채우기 */
@@ -124,7 +129,10 @@ body {
   cursor: pointer;                        /* 손가락 커서 */
 }
 .card:hover { border-color: var(--ink); }  /* 마우스를 올리면 테두리만 파랗게 (그림자 없음) */
-.card-text { min-width: 0; }               /* 긴 글이 상자를 밀어내지 않게 */
+.card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }  /* 키보드로 고를 때 표시 */
+.card.is-read { opacity: 0.65; }           /* 읽은 기사: 살짝 흐리게 */
+.read-mark { margin-left: 6px; font-size: 11px; color: var(--sub); }   /* "✓ 읽음" */
+.card-text { min-width: 0; padding-right: 26px; }   /* 긴 글이 상자를 밀어내지 않게 + 책갈피 자리 비우기 */
 .card-title { margin: 2px 0 4px; font-size: 16px; font-weight: 700; line-height: 1.45; }
 .card-oneline { margin: 0; font-size: 14px; line-height: 1.55; color: var(--sub); }
 
@@ -218,3 +226,106 @@ body {
 .sources p { margin: 0; }
 .sources ul { margin: 0; padding-left: 18px; }
 .sources a { color: var(--ink); word-break: break-all; }
+
+/* ==== 책갈피(저장) 버튼 ==== */
+/* 누를 수 있는 영역은 44px, 아이콘은 20px */
+.save-btn {
+  position: absolute;                     /* 카드 오른쪽 위에 */
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--off);                      /* 안 저장: 회색 선 */
+  cursor: pointer;
+}
+.save-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.save-btn.is-saved { color: var(--ink); }                 /* 저장: 잉크 파랑 */
+.save-btn.is-saved svg { fill: currentColor; }            /* 안을 채운다 */
+.save-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
+/* 기사 화면: 제목 옆 책갈피 */
+.title-row { display: flex; align-items: flex-start; gap: 4px; }
+.title-row .article-title { flex: 1; }
+.title-row .save-btn { position: static; flex: none; margin: -6px -12px 0 0; }
+.title-row .save-btn svg { width: 24px; height: 24px; }
+
+/* ==== 하단 탭 ==== */
+.tabbar {
+  position: fixed;                        /* 화면 맨 아래 고정 */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;                            /* 내용 위에 */
+  background: var(--paper);               /* 배경 #FDFDFB */
+  border-top: 1px solid var(--border);    /* 위에 1px 선 */
+  /* 아이폰 홈 막대·가장자리에 가리지 않게 안전 여백 */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.tabbar-inner { display: flex; max-width: 440px; margin: 0 auto; }
+.tab {
+  flex: 1;                                /* 세 탭이 같은 폭 */
+  height: var(--tabbar-h);
+  display: flex;
+  flex-direction: column;                 /* 아이콘 아래 글자 */
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--off);                      /* 선택 안 됨: 회색 */
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tab.active { color: var(--ink); font-weight: 700; }      /* 선택: 잉크 파랑 + 굵게 */
+.tab.active .sun { stroke: var(--sun); fill: var(--sun); } /* 오늘 탭 선택: 해는 주황, 선은 잉크 파랑 */
+
+/* ==== 모아보기·저장 ==== */
+.top-count { white-space: nowrap; }                       /* "전체 N건" */
+/* 분야 칩: 넘치면 옆으로 밀기 */
+.fields {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 4px;
+  padding: 2px;                           /* 테두리가 잘리지 않게 */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fields::-webkit-scrollbar { display: none; }
+.field-chip {
+  flex: none;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--field, var(--text));       /* 글자는 분야 색 ("전체"는 검정) */
+  cursor: pointer;
+}
+.field-chip.selected {                    /* 고른 칩: 형광 노랑 + 1.5px 검은 테두리 */
+  background: var(--marker);
+  border: 1.5px solid var(--text);
+  padding: 5.5px 9.5px;                   /* 테두리가 두꺼워진 만큼 줄여 크기 유지 */
+}
+/* 날짜 머리말 "11.27 FRI" */
+.day-head { margin: 22px 2px 8px; font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); }
+
+/* ==== 더 볼거리 (오늘 화면 맨 아래) ==== */
+.more { margin: 28px 0 0; padding-top: 14px; border-top: 1.5px dashed var(--border); }   /* 위에 점선 */
+.more-title { margin: 0 0 4px; font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+.more ul { list-style: none; margin: 0; padding: 0; }
+.more li { padding: 8px 0; font-size: 14px; line-height: 1.5; }
+.more a { color: var(--text); text-decoration: none; }
+.more a:hover { text-decoration: underline; }
+.more-site { display: block; margin: 2px 0 0 10px; font-size: 11px; color: var(--sub); }  /* 작은 사이트 이름 */
