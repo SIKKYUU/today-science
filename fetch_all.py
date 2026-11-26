@@ -50,14 +50,12 @@ SITES = [
     # 더 볼거리 후보로만 쓰는 곳
     ("동아사이언스", "https://news.google.com/rss/search?q=site:dongascience.com{DATES}&hl=ko&gl=KR&ceid=KR:ko", GOOGLE_LIMIT, "more_only"),   # robots.txt가 자동 접근을 막음
     ("YTN 사이언스", "https://news.google.com/rss/search?q=site:science.ytn.co.kr{DATES}&hl=ko&gl=KR&ceid=KR:ko", GOOGLE_LIMIT, "more_only"),  # 원문 주소를 얻을 방법이 없음
-    ("한겨레", "https://www.hani.co.kr/rss/science/", DAILY_LIMIT, "more_only"),   # robots.txt가 Claude의 본문 읽기를 막음
+    # 한겨레는 robots.txt가 Claude의 접근을 막아서 넣지 않는다 (더 볼거리 후보로도 쓰지 않음)
 ]
-# RSS에 날짜가 없는 곳(한겨레)은 맨 앞(최신) 몇 개만 최근 기사로 본다
-NO_DATE_LIMIT = 15
 # 이런 제목은 기사가 아니라 메뉴 페이지라서 뺀다
 MENU_TITLE = re.compile(r"/사용자메뉴/|^(과학기술|과학정책|과학문화)$")
 # 국내 매체 이름 (요약표에서 "국내 후보 중 원문 링크 있는 수"를 셀 때 쓴다)
-DOMESTIC = {"경향신문", "동아일보", "조선비즈", "사이언스타임즈", "동아사이언스", "YTN 사이언스", "한겨레"}
+DOMESTIC = {"경향신문", "동아일보", "조선비즈", "사이언스타임즈", "동아사이언스", "YTN 사이언스"}
 
 # 웹페이지를 읽을 때 쓰는 브라우저 이름표
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36"
@@ -175,18 +173,14 @@ for name, url, limit, kind in SITES:
         # 조건을 통과한 기사를 모아둘 목록
         kept = []
         # 꺼낸 기사를 하나씩 살펴본다
-        for position, entry in enumerate(entries):
+        for entry in entries:
             # 날짜 정보(UTC 기준): 발행일(published)이 없으면 수정일(updated, 경향신문은 이쪽)을 쓴다
             parsed = entry.get("published_parsed") or entry.get("updated_parsed")
-            if parsed:
-                # feedparser가 준 날짜를 계산 가능한 시각으로 바꾸고, 한국 시간으로 옮긴다
-                published = datetime(*parsed[:6], tzinfo=timezone.utc).astimezone(KST)
-            elif kind == "more_only" and position < NO_DATE_LIMIT:
-                # 날짜가 아예 없는 RSS(한겨레)는 맨 앞 몇 개만 기준 시각의 기사로 본다 (더 볼거리 후보 전용)
-                published = now
-            else:
-                # 그 밖에 날짜가 없는 기사는 최신인지 알 수 없으니 건너뛴다
+            # 날짜가 없는 기사는 최신인지 알 수 없으니 건너뛴다
+            if not parsed:
                 continue
+            # feedparser가 준 날짜를 계산 가능한 시각으로 바꾸고, 한국 시간으로 옮긴다
+            published = datetime(*parsed[:6], tzinfo=timezone.utc).astimezone(KST)
             # 기준 시각보다 오래된 기사는 건너뛴다
             if published < cutoff:
                 continue
