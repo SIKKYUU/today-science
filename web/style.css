@@ -35,7 +35,13 @@ body {
   font-size: 16px;                                              /* 기본 글자 크기 */
   line-height: 1.75;                                            /* 줄 간격 */
   word-break: keep-all;                                         /* 한국어 단어가 중간에 끊기지 않게 */
+  /* 아이폰 노치(위)·홈 막대(아래)·가장자리에 글자가 가리지 않게 안전 여백을 둔다 (없는 기기는 0) */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+
+/* 오프라인 안내 (손글씨, 잉크 파랑): 내용 폭에 맞춰 맨 위에 둔다 */
+.offline { max-width: 440px; margin: 0 auto; padding: 12px 16px 0; }
+.offline[hidden] { display: none; }  /* hidden일 때 확실히 숨긴다 */
 
 /* 내용 폭을 휴대폰 크기(최대 440px)로 맞추고 가운데 둔다 */
 #app { max-width: 440px; margin: 0 auto; padding: 20px 16px 48px; }

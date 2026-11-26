@@ -1,0 +1,16 @@
+{
+  "name": "오늘과학",
+  "short_name": "오늘과학",
+  "lang": "ko",
+  "start_url": "/today-science/web/",
+  "scope": "/today-science/web/",
+  "display": "standalone",
+  "background_color": "#FDFDFB",
+  "theme_color": "#FDFDFB",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

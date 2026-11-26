@@ -263,4 +263,32 @@ async function start() {
   }
 }
 
+// ==== 오프라인 안내 ====
+// 인터넷 연결 상태에 따라 맨 위 손글씨 안내를 켜고 끈다
+const offlineNote = document.getElementById("offline");
+function showConnection() {
+  offlineNote.hidden = navigator.onLine;   // 연결돼 있으면 숨기고, 끊기면 보인다
+}
+window.addEventListener("online", showConnection);    // 연결이 돌아오면
+window.addEventListener("offline", showConnection);   // 연결이 끊기면
+showConnection();                                      // 처음 열었을 때 한 번
+
+// ==== 서비스 워커(오프라인 저장 담당) 등록 ====
+if ("serviceWorker" in navigator) {
+  // 이미 서비스 워커가 맡고 있던 화면인지 기억한다 (처음 설치 때는 새로고침하지 않기 위해)
+  const hadWorker = Boolean(navigator.serviceWorker.controller);
+  let reloaded = false;
+  // 새 버전 서비스 워커가 일을 맡으면 한 번만 새로고침해서 새 화면 파일을 보여준다
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadWorker && !reloaded) { reloaded = true; location.reload(); }
+  });
+  // sw.js를 등록한다 (실패해도 화면은 그대로 동작한다)
+  navigator.serviceWorker.register("sw.js").then((registration) => {
+    // 앱을 다시 열어 화면에 돌아올 때마다 새 버전이 있는지 확인한다
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") registration.update().catch(() => {});
+    });
+  }).catch((error) => console.warn("서비스 워커 등록 실패", error));
+}
+
 start();
