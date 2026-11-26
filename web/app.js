@@ -20,6 +20,8 @@ const app = document.getElementById("app");
 let dates = [];
 // 날짜별로 불러온 기사 목록 (한 번 받은 날짜는 다시 받지 않는다)
 const newsByDate = {};
+// 날짜별 판 종류: "weekday"(평일판) 또는 "weekend"(주말판)
+const editions = {};
 // 화면 그리기 순번 (느린 응답이 늦게 도착해 최신 화면을 덮어쓰지 않게)
 let routeTurn = 0;
 
@@ -66,8 +68,14 @@ async function fetchJson(fileName) {
 async function loadDates() {
   // 1) 목차 파일(index.json)을 먼저 읽는다
   const index = await fetchJson("index.json");
+  // 지금 형식: { "issues": [ { "date": "2026-11-26", "edition": "weekday" }, ... ] }
+  if (index && Array.isArray(index.issues) && index.issues.length) {
+    for (const issue of index.issues) editions[issue.date] = issue.edition;   // 날짜별 판 종류 기억
+    return index.issues.map((issue) => issue.date).sort();                   // 날짜순 정렬 (오래된 → 최근)
+  }
+  // 예전 형식: { "dates": ["2026-11-25", ...] } (저장본이 옛날 것일 때 대비)
   if (index && Array.isArray(index.dates) && index.dates.length) {
-    return [...index.dates].sort();   // 날짜순 정렬 (오래된 → 최근)
+    return [...index.dates].sort();
   }
   // 2) 목차가 없으면: 오늘부터 거슬러 올라가 가장 최근 뉴스 하나를 찾는다
   for (let back = 0; back <= LOOKBACK_DAYS; back++) {
@@ -193,8 +201,16 @@ function renderList(date, articles) {
 
   // 손글씨 메모: 그 날의 기사 수와 읽는 시간 합계
   const total = articles.reduce((sum, a) => sum + (a.read_minutes || 1), 0);
-  const when = date === todayText() ? "오늘" : "이날";
-  app.append(el("p", `${when} 관찰 기록 ${articles.length}건 ✍️ 다 읽어도 ${total}분!`, { class: "pen memo" }));
+  let memo;
+  if (editions[date] === "weekend") {
+    // 주말판: 이번 주 놓친 소식 모음
+    memo = `주말 특집 · 이번 주 놓친 기록 ${articles.length}건 ✍️ 다 읽어도 ${total}분!`;
+  } else {
+    // 평일판: 오늘이면 "오늘", 지난 날이면 "이날"
+    const when = date === todayText() ? "오늘" : "이날";
+    memo = `${when} 관찰 기록 ${articles.length}건 ✍️ 다 읽어도 ${total}분!`;
+  }
+  app.append(el("p", memo, { class: "pen memo" }));
 
   // 기사마다 카드를 하나씩 만든다
   articles.forEach((article, index) => {

@@ -1,6 +1,6 @@
 {
-  "dates": [
-    "2026-11-25",
-    "2026-11-26"
+  "issues": [
+    { "date": "2026-11-25", "edition": "weekday" },
+    { "date": "2026-11-26", "edition": "weekday" }
   ]
 }
