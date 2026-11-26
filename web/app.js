@@ -1,7 +1,7 @@
 // ==== 설정 ====
 // 뉴스 파일이 있는 폴더 (web 폴더 기준으로 한 칸 위의 data 폴더)
 const DATA_DIR = "../data/";
-// 오늘 파일이 없을 때 며칠 전까지 거슬러 올라가며 찾을지
+// 목차(index.json)를 못 읽을 때, 며칠 전까지 거슬러 올라가며 뉴스를 찾을지
 const LOOKBACK_DAYS = 30;
 // 분야 이름을 코드체 영어 라벨로 바꾸는 표
 const FIELD_LABELS = {
@@ -10,36 +10,89 @@ const FIELD_LABELS = {
   "기술·AI": "TECH·AI",
   "환경·기후": "EARTH·CLIMATE",
 };
+// 요일 이름: 한국어(날짜 글자용), 영어(날짜 칩용)
+const DAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
+const DAYS_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 // 화면 전체를 담는 상자
 const app = document.getElementById("app");
-// 불러온 뉴스 기사 목록과 그 날짜를 담아둘 곳
-let articles = [];
-let newsDate = null;
+// 뉴스가 있는 날짜 목록 (오래된 날 → 최근 날, 예: "2026-11-26")
+let dates = [];
+// 날짜별로 불러온 기사 목록 (한 번 받은 날짜는 다시 받지 않는다)
+const newsByDate = {};
+// 화면 그리기 순번 (느린 응답이 늦게 도착해 최신 화면을 덮어쓰지 않게)
+let routeTurn = 0;
 
-// 날짜를 "2026-11-25"(구분자 "-") 또는 "2026.11.25"(구분자 ".") 형식으로 바꾼다
-function formatDate(date, sep = "-") {
+// ==== 날짜 도우미 ====
+// Date → "2026-11-26"
+function formatDate(date) {
   const y = date.getFullYear();                              // 연도
   const m = String(date.getMonth() + 1).padStart(2, "0");    // 월 (두 자리)
   const d = String(date.getDate()).padStart(2, "0");         // 일 (두 자리)
-  return [y, m, d].join(sep);                                // 구분자로 이어 붙이기
+  return `${y}-${m}-${d}`;
+}
+// "2026-11-26" → Date (내 컴퓨터 시간대 기준)
+function parseDate(text) {
+  const [y, m, d] = text.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+// "2026-11-26" → "2026년 11월 26일 목요일"
+function longDate(text) {
+  const d = parseDate(text);
+  return `${d.getFullYear()}년 ${shortDate(text)}`;
+}
+// "2026-11-26" → "11월 26일 목요일"
+function shortDate(text) {
+  const d = parseDate(text);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${DAYS_KO[d.getDay()]}요일`;
+}
+// 오늘 날짜 글자 ("2026-11-26")
+function todayText() {
+  return formatDate(new Date());
 }
 
-// 오늘부터 하루씩 거슬러 올라가며, 가장 최근 news_날짜.json을 찾아 읽는다
-async function loadLatestNews() {
+// ==== 데이터 읽기 ====
+// data 폴더의 json 파일을 읽는다 (없거나 실패하면 null)
+async function fetchJson(fileName) {
+  try {
+    const response = await fetch(DATA_DIR + fileName, { cache: "no-store" });
+    return response.ok ? await response.json() : null;
+  } catch (error) {
+    return null;   // 인터넷이 끊겼고 저장본도 없을 때
+  }
+}
+
+// 뉴스가 있는 날짜 목록을 만든다
+async function loadDates() {
+  // 1) 목차 파일(index.json)을 먼저 읽는다
+  const index = await fetchJson("index.json");
+  if (index && Array.isArray(index.dates) && index.dates.length) {
+    return [...index.dates].sort();   // 날짜순 정렬 (오래된 → 최근)
+  }
+  // 2) 목차가 없으면: 오늘부터 거슬러 올라가 가장 최근 뉴스 하나를 찾는다
   for (let back = 0; back <= LOOKBACK_DAYS; back++) {
-    // 오늘에서 back일 전 날짜를 만든다
     const date = new Date();
     date.setDate(date.getDate() - back);
-    // 그 날짜의 파일을 요청한다
-    const response = await fetch(`${DATA_DIR}news_${formatDate(date)}.json`, { cache: "no-store" });
-    // 파일이 있으면 내용을 읽어서 돌려준다
-    if (response.ok) return { date, list: await response.json() };
+    const text = formatDate(date);
+    const list = await fetchJson(`news_${text}.json`);
+    if (list) {
+      newsByDate[text] = list;   // 찾은 뉴스는 기억해 둔다
+      return [text];
+    }
   }
-  // 끝까지 못 찾으면 null을 돌려준다
-  return null;
+  return [];
 }
 
+// 한 날짜의 뉴스 5개를 읽는다 (이미 읽은 날짜면 기억해 둔 것을 쓴다)
+async function loadNews(date) {
+  if (!newsByDate[date]) {
+    const list = await fetchJson(`news_${date}.json`);
+    if (list) newsByDate[date] = list;   // 실패한 건 기억하지 않는다 (다음에 다시 시도)
+  }
+  return newsByDate[date] || null;
+}
+
+// ==== 화면 요소 도우미 ====
 // 태그 이름과 글자, 속성을 받아 화면 요소를 만드는 도우미
 // (글자는 textContent로 넣어서, 데이터에 이상한 코드가 있어도 실행되지 않는다)
 function el(tag, text, attrs = {}) {
@@ -88,17 +141,60 @@ function splitTitle(title) {
 }
 
 // ==== 화면 1: 목록 ====
-function renderList() {
-  app.replaceChildren();
-  // 맨 위 줄: 앱 이름 + LOG 날짜
+// 맨 위 줄: 왼쪽 앱 이름 + 오른쪽 보고 있는 날짜
+function topBar(date) {
   const top = el("header", "", { class: "top" });
-  top.append(el("h1", "오늘과학 🔬", { class: "app-name" }));
-  top.append(el("span", `LOG ${formatDate(newsDate, ".")}`, { class: "mono" }));
-  app.append(top);
+  top.append(el("h1", "오늘 과학 🔬", { class: "app-name" }));
+  top.append(el("span", longDate(date), { class: "top-date" }));
+  return top;
+}
 
-  // 손글씨 메모: 기사 수와 읽는 시간 합계
+// 날짜 띠: 뉴스가 있는 날짜만 칩으로 가로로 늘어놓는다
+function dayStrip(current) {
+  const strip = el("nav", "", { class: "days", "aria-label": "날짜 고르기" });
+  const today = todayText();
+  for (const date of dates) {
+    const d = parseDate(date);
+    const chip = el("button", "", { class: "day", type: "button", "aria-label": longDate(date) });
+    if (date === today) chip.classList.add("today");          // 오늘 칩: 형광 노랑
+    if (date === current) {                                   // 보고 있는 칩: 검은 테두리
+      chip.classList.add("current");
+      chip.setAttribute("aria-current", "date");
+    }
+    chip.append(el("span", DAYS_EN[d.getDay()], { class: "day-name" }));  // 위: 영어 요일
+    chip.append(el("b", String(d.getDate())));                           // 아래: 날짜 숫자
+    // 누르면 주소 끝이 #날짜로 바뀌고 → 그 날짜 뉴스로 다시 그린다
+    chip.addEventListener("click", () => { location.hash = date; });
+    strip.append(chip);
+  }
+  return strip;
+}
+
+// 날짜 띠를 오른쪽 끝(가장 최근)에 맞추고, 보고 있는 칩이 가려져 있으면 보이게 옮긴다
+function scrollStrip(strip) {
+  strip.scrollLeft = strip.scrollWidth;                        // 먼저 오른쪽 끝으로
+  const chip = strip.querySelector(".current");
+  if (chip && chip.offsetLeft < strip.scrollLeft) {            // 보고 있는 칩이 왼쪽에 가려졌으면
+    strip.scrollLeft = chip.offsetLeft - 8;                    // 그 칩이 보이게 옮긴다
+  }
+}
+
+// 이름 줄 + 날짜 띠를 그리고, 날짜 띠를 돌려준다
+function renderHead(date) {
+  app.replaceChildren();
+  app.append(topBar(date));
+  const strip = dayStrip(date);
+  app.append(strip);
+  scrollStrip(strip);   // 화면에 붙인 다음에 위치를 맞춰야 한다
+}
+
+function renderList(date, articles) {
+  renderHead(date);
+
+  // 손글씨 메모: 그 날의 기사 수와 읽는 시간 합계
   const total = articles.reduce((sum, a) => sum + (a.read_minutes || 1), 0);
-  app.append(el("p", `오늘 관찰 기록 ${articles.length}건 ✍️ 다 읽어도 ${total}분!`, { class: "pen memo" }));
+  const when = date === todayText() ? "오늘" : "이날";
+  app.append(el("p", `${when} 관찰 기록 ${articles.length}건 ✍️ 다 읽어도 ${total}분!`, { class: "pen memo" }));
 
   // 기사마다 카드를 하나씩 만든다
   articles.forEach((article, index) => {
@@ -110,13 +206,19 @@ function renderList() {
     text.append(el("h2", article.title, { class: "card-title" }));
     text.append(el("p", article.one_line, { class: "card-oneline" }));
     card.append(text);
-    // 카드를 누르면 주소 끝을 #article-번호로 바꿔 기사 화면으로 간다
-    card.addEventListener("click", () => { location.hash = `article-${index}`; });
+    // 카드를 누르면 주소 끝을 #날짜/article-번호로 바꿔 기사 화면으로 간다
+    card.addEventListener("click", () => { location.hash = `${date}/article-${index}`; });
     app.append(card);
   });
 
   // 맨 아래 손글씨
   app.append(el("p", "내일 아침, 다음 기록 →", { class: "pen end" }));
+}
+
+// 그 날짜 뉴스를 못 읽었을 때 (예: 오프라인인데 저장본이 없는 날)
+function renderMissing(date) {
+  renderHead(date);
+  app.append(el("p", "이 날의 기록을 불러오지 못했어요. 인터넷 연결을 확인해주세요.", { class: "notice" }));
 }
 
 // "라벨 이모지: 설명" 한 줄을 "이모지 + 굵은 라벨 + 설명" 목록 항목으로 만든다
@@ -164,15 +266,15 @@ function link(text, href) {
 }
 
 // ==== 화면 2: 기사 ====
-function renderArticle(index) {
+function renderArticle(date, articles, index) {
   const article = articles[index];
-  // 없는 번호면 목록으로 돌아간다
-  if (!article) { location.hash = ""; return; }
+  // 없는 번호면 그 날짜 목록으로 돌아간다
+  if (!article) { location.hash = date; return; }
   app.replaceChildren();
 
-  // 뒤로 가기 버튼 (코드체)
-  const back = el("button", `← LOG ${formatDate(newsDate, ".")}`, { class: "back", type: "button" });
-  back.addEventListener("click", () => { location.hash = ""; });
+  // 뒤로 가기 버튼: "← 11월 26일 목요일" → 그 날짜 목록으로
+  const back = el("button", `← ${shortDate(date)}`, { class: "back", type: "button" });
+  back.addEventListener("click", () => { location.hash = date; });
   app.append(back);
 
   // 기사 본문을 담는 상자
@@ -235,32 +337,35 @@ function renderArticle(index) {
   window.scrollTo(0, 0);
 }
 
-// 주소 끝(#article-번호)을 보고 어떤 화면을 그릴지 정한다
-function route() {
-  const match = location.hash.match(/^#article-(\d+)$/);
-  if (match) renderArticle(Number(match[1]));
-  else renderList();
+// ==== 주소 보고 화면 고르기 ====
+// 주소 끝 모양:
+//   (없음)                 → 가장 최근 날짜 목록
+//   #2026-11-25            → 그 날짜 목록
+//   #2026-11-25/article-2  → 그 날짜의 3번째 기사
+//   #article-2             → (예전 주소) 가장 최근 날짜의 3번째 기사
+async function route() {
+  const turn = ++routeTurn;                                       // 이번 그리기 순번
+  const match = location.hash.match(/^#?(\d{4}-\d{2}-\d{2})?\/?(?:article-(\d+))?$/);
+  const date = (match && match[1]) || dates[dates.length - 1];   // 날짜가 없으면 가장 최근
+  const index = match && match[2] !== undefined ? Number(match[2]) : null;
+  const articles = await loadNews(date);
+  if (turn !== routeTurn) return;                                 // 그새 다른 화면을 눌렀으면 그만
+  if (!articles) renderMissing(date);
+  else if (index === null) renderList(date, articles);
+  else renderArticle(date, articles, index);
 }
 
 // ==== 시작 ====
 async function start() {
-  try {
-    const result = await loadLatestNews();
-    // 뉴스 파일을 못 찾으면 안내한다
-    if (!result) {
-      app.replaceChildren(el("p", `최근 ${LOOKBACK_DAYS}일 안에 만든 뉴스 파일이 없어요.`, { class: "status" }));
-      return;
-    }
-    articles = result.list;
-    newsDate = result.date;
-    // 주소가 바뀔 때마다(카드 누르기, 뒤로 가기) 화면을 다시 그린다
-    window.addEventListener("hashchange", route);
-    route();
-  } catch (error) {
-    // 파일을 더블클릭해서 열면 여기로 온다 (브라우저가 파일 읽기를 막기 때문)
-    app.replaceChildren(el("p", "뉴스를 읽지 못했어요. 로컬 서버로 열었는지 확인해주세요.", { class: "status" }));
-    console.error(error);
+  dates = await loadDates();
+  // 뉴스 파일을 하나도 못 찾으면 안내한다
+  if (!dates.length) {
+    app.replaceChildren(el("p", "뉴스를 읽지 못했어요. 인터넷 연결이나 로컬 서버를 확인해주세요.", { class: "status" }));
+    return;
   }
+  // 주소가 바뀔 때마다(칩·카드 누르기, 뒤로 가기) 화면을 다시 그린다
+  window.addEventListener("hashchange", route);
+  route();
 }
 
 // ==== 오프라인 안내 ====

@@ -62,10 +62,50 @@ body {
   display: flex;                          /* 가로로 나란히 */
   justify-content: space-between;         /* 양 끝으로 벌리기 */
   align-items: baseline;                  /* 글자 바닥선 맞추기 */
+  gap: 12px;                              /* 이름과 날짜가 붙지 않게 */
   padding-bottom: 8px;                    /* 줄과 글자 사이 */
   border-bottom: 2px solid var(--text);   /* 검은 줄 */
 }
-.app-name { margin: 0; font-size: 24px; font-weight: 700; }
+.app-name { margin: 0; font-size: 24px; font-weight: 700; white-space: nowrap; }
+/* 오른쪽 위 날짜: 본문 글꼴 굵게, 이름보다 작게 */
+.top-date { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+/* 날짜 띠: 칩을 가로로 늘어놓고, 넘치면 옆으로 밀어서 넘긴다 */
+.days {
+  position: relative;                     /* 칩 위치 계산 기준 (app.js의 scrollStrip) */
+  display: flex;                          /* 가로로 나란히 */
+  gap: 6px;                               /* 칩 사이 간격 */
+  margin: 12px 0 0;                       /* 이름 줄과의 간격 */
+  padding: 2px;                           /* 테두리가 잘리지 않게 */
+  overflow-x: auto;                       /* 넘치면 옆으로 밀기 */
+  scrollbar-width: none;                  /* 스크롤 막대 숨기기 (파이어폭스) */
+}
+.days::-webkit-scrollbar { display: none; }  /* 스크롤 막대 숨기기 (사파리·크롬) */
+/* 날짜 칩 하나: 위 영어 요일, 아래 날짜 숫자 */
+.day {
+  flex: none;                             /* 줄어들지 않게 */
+  width: 48px;                            /* 칩 폭 */
+  height: 52px;                           /* 칩 높이 (테두리 두께가 달라도 크기 그대로) */
+  display: flex;                          /* 요일과 숫자를 */
+  flex-direction: column;                 /* 세로로 */
+  align-items: center;                    /* 가운데 정렬 */
+  justify-content: center;
+  padding: 0;
+  background: #fff;                       /* 흰 배경 */
+  border: 1px solid var(--border);        /* 1px 테두리 */
+  border-radius: var(--radius);           /* 모서리 2px */
+  color: var(--text);
+  font: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.day-name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--sub); }
+.day b { font-size: 18px; font-weight: 700; }
+.day.today { background: var(--marker); }                 /* 오늘 칩: 형광 노랑 */
+.day.current { border: 1.5px solid var(--text); }        /* 보고 있는 칩: 검은 테두리 */
+
+/* 그 날 뉴스를 못 읽었을 때 안내 */
+.notice { margin: 24px 4px; color: var(--sub); }
 .memo { margin: 14px 0 18px; transform: rotate(-1.5deg); transform-origin: left; }  /* 살짝 기울인 손글씨 */
 
 /* 기사 카드 (누를 수 있는 버튼): 왼쪽 썸네일 + 오른쪽 글 */

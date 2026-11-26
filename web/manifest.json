@@ -1,6 +1,6 @@
 {
-  "name": "오늘과학",
-  "short_name": "오늘과학",
+  "name": "오늘 과학",
+  "short_name": "오늘 과학",
   "lang": "ko",
   "start_url": "/today-science/web/",
   "scope": "/today-science/web/",
