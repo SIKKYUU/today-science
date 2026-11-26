@@ -127,7 +127,6 @@ body {
 .card-text { min-width: 0; }               /* 긴 글이 상자를 밀어내지 않게 */
 .card-title { margin: 2px 0 4px; font-size: 16px; font-weight: 700; line-height: 1.45; }
 .card-oneline { margin: 0; font-size: 14px; line-height: 1.55; color: var(--sub); }
-.end { margin: 18px 4px 0; text-align: right; transform: rotate(-1.5deg); transform-origin: right; }
 
 /* 썸네일: 사진이 있으면 사진, 없으면 분야 색 + 흰 모눈 + 이모지 */
 .thumb {

@@ -226,9 +226,6 @@ function renderList(date, articles) {
     card.addEventListener("click", () => { location.hash = `${date}/article-${index}`; });
     app.append(card);
   });
-
-  // 맨 아래 손글씨
-  app.append(el("p", "내일 아침, 다음 기록 →", { class: "pen end" }));
 }
 
 // 그 날짜 뉴스를 못 읽었을 때 (예: 오프라인인데 저장본이 없는 날)
