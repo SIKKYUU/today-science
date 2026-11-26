@@ -18,6 +18,8 @@ REQUIRED = ["type", "title", "field", "lead", "sections", "notes", "one_line", "
             "emoji", "read_minutes", "source_site", "original_title", "link", "sources"]
 # 쓸 수 있는 분야 이름
 FIELDS = {"물리·우주", "생명·의학", "기술·AI", "환경·기후"}
+# 국내 기사로 세는 매체 (기사로 고를 수 있는 곳)
+DOMESTIC = {"사이언스타임즈", "경향신문", "동아일보", "조선비즈"}
 
 # 문제를 모아두는 목록 (하나라도 있으면 실패)
 problems = []
@@ -63,9 +65,10 @@ else:
                 elif not str(item["link"]).startswith(("http://", "https://")):
                     fail(f"더 볼거리 {number}번 링크가 http 주소가 아니에요")
             sites = [item.get("site") for item in more if isinstance(item, dict)]
-            if sites.count("동아사이언스") != 3 or sites.count("YTN 사이언스") != 3:
+            too_many = sorted({site for site in sites if sites.count(site) > 3})
+            if len(more) != 6 or too_many:
                 # 후보가 모자랄 수 있으니 발행은 한다. 기록만 남긴다.
-                print(f"⚠ 더 볼거리가 동아사이언스 3개·YTN 사이언스 3개가 아니에요: {sites}")
+                print(f"⚠ 더 볼거리는 6개(한 사이트 최대 3개)여야 해요: {len(more)}개, 사이트 {sites}")
             data["more"] = more
             if len(news) != 10:
                 # 10개가 아니어도 발행은 한다 (본문을 못 읽어 줄었을 수 있음). 기록만 남긴다.
@@ -77,9 +80,16 @@ else:
                     continue
                 if article["field"] not in FIELDS:
                     fail(f"{number}번 기사 분야가 이상해요: {article['field']}")
+                # 기사 링크는 원문 주소여야 한다 (구글 뉴스 주소면 원문을 못 읽은 것)
+                if "news.google.com" in str(article["link"]) or not str(article["link"]).startswith("http"):
+                    fail(f"{number}번 기사 링크가 원문 주소가 아니에요: {article['link']}")
                 # 읽는 시간을 규칙대로 다시 계산한다 (도입부 + 본문 글자 수 ÷ 500, 반올림, 최소 1)
                 chars = len(article["lead"]) + sum(len(s.get("body", "")) for s in article["sections"])
                 article["read_minutes"] = max(1, int(chars / 500 + 0.5))
+            # 국내 기사 수 (가능하면 4개 이상. 모자라도 발행은 하고 기록만 남긴다)
+            domestic = sum(a.get("source_site") in DOMESTIC for a in news)
+            if domestic < 4:
+                print(f"⚠ 국내 기사가 {domestic}개예요 (목표 4개 이상)")
             # 다시 계산한 읽는 시간을 저장한다
             news_file.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

@@ -143,10 +143,12 @@ jobs:
             - 평일판: 워크플로가 이미 python fetch_all.py를 실행해 data/candidates_${{ needs.prepare.outputs.date }}.json을 만들어 두었다. fetch_all.py를 다시 실행하지 않는다.
             - 주말판: CLAUDE.md "주말판" 규칙대로 ${{ needs.prepare.outputs.week_from }} ~ ${{ needs.prepare.outputs.week_to }}의 data/candidates_날짜.json 파일들(있는 것만)에서 고른다.
             - 이미 발행한 기사(data/news_*.json 전부)와 같은 소식은 고르지 않는다.
+            - 기사로 고를 수 있는 후보는 original_link가 http 주소이고 more_only가 false인 것만이다. 본문은 original_link로 읽고, 기사의 link에도 original_link를 넣는다.
+            - 국내 기사는 가능하면 4개 이상. 10개 또는 국내 4개를 못 채웠으면 review 파일 맨 위에 몇 개가 부족했고 왜인지 적는다.
 
             ## 발행 모드(publish)일 때
             1. CLAUDE.md 편집 지침(평일판) 또는 주말판 규칙대로 10개를 고르고, 원문을 읽고, 쓴다.
-            2. CLAUDE.md "더 볼거리" 규칙대로 같은 후보에서 동아사이언스 3개, YTN 사이언스 3개를 제목만 보고 고른다(본문은 읽지 않는다).
+            2. CLAUDE.md "더 볼거리" 규칙대로 more_only가 true인 후보에서 6개(한 사이트 최대 3개)를 제목만 보고 고른다(본문은 읽지 않는다).
             3. data/news_${{ needs.prepare.outputs.date }}.json에 "저장 형식"대로 { "articles": [기사 10개], "more": [더 볼거리 6개] } 형태로 저장한다.
             4. data/index.json은 고치지 않는다. 워크플로가 검사 단계에서 업데이트한다.
             5. CLAUDE.md "오늘 뉴스 발행해줘"에서 보여줄 내용(고른 10개 제목, 더 볼거리 6개 제목, 버린 기사와 이유, 기사별 검수 메모)을
