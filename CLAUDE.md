@@ -42,6 +42,15 @@
 5. git add, git commit(메시지는 "M월 D일 뉴스", 예: "11월 27일 뉴스"), git push 한다.
 6. 사이트(https://sikkyuu.github.io/today-science/)에는 1~2분 뒤 반영된다고 알려준다.
 
+## 자동 발행 (GitHub Actions)
+- .github/workflows/daily-news.yml 이 매일 한국 시간 오전 7시에 위 "매일 발행"을 자동으로 한다.
+  - 날짜 확인 → (평일이면) python fetch_all.py 날짜 → Claude가 10개 작성 → scripts/check_news.py 검사 → 커밋·push
+  - 이미 data/news_날짜.json이 있는 날, 미래 날짜는 만들지 않는다.
+  - 자동 발행 때 Claude는 git을 쓰지 않고, data/index.json도 고치지 않는다(검사 단계가 업데이트하고 읽는 시간도 다시 계산한다).
+  - 검수 메모는 review/날짜.md 로 저장해 함께 커밋한다.
+  - Actions 탭에서 직접 실행할 때 날짜와 시험 모드(review/test-날짜.md에 고를 10개 제목만 저장)를 고를 수 있다.
+- python fetch_all.py 2026-11-24 처럼 날짜를 붙이면 그 날짜판 후보(그날 밤까지 3일치)를 candidates_그날짜.json으로 저장한다.
+
 ## 화면 파일 버전 관리
 - web 폴더의 화면 파일(html, css, js, manifest, 아이콘)을 고치면
   web/sw.js 맨 위의 VERSION 숫자를 하나 올린다 (v1 → v2).
@@ -111,6 +120,10 @@
   (예: "https://www.sciencetimes.co.krhttps://img7.yna.co.kr/…jpg").
   이렇게 주소 안에 "http"가 두 번 나오면 마지막 "http"부터 끝까지만 image에 저장한다.
   저장하기 전에 그 주소로 사진이 실제로 열리는지 확인한다.
+- 국내 기사(구글 뉴스 링크)는 원문 주소로 넘어가지 않는다. 사이언스타임즈 원문은
+  https://www.sciencetimes.co.kr/nscvrg/view/menu/248?nscvrgSn=번호 형식이고 번호가 차례로 늘어나므로,
+  최근 발행 기사(data/news_*.json의 link)의 번호부터 하나씩 올려가며 페이지의 og:title이 후보 제목과 같은 것을 찾는다.
+  원문 주소를 못 찾으면 그 기사는 고르지 않는다.
 
 ## 백업
 - 데이터 파일(data/ 안의 json)을 고치거나 덮어쓰기 전에 원래 파일을 backup 폴더에 복사해 둔다.

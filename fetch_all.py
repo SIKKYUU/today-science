@@ -9,6 +9,8 @@ import re
 import html
 # 파일·폴더 위치를 다루는 파이썬 기본 도구를 불러온다
 from pathlib import Path
+# 실행할 때 붙인 값(날짜)을 읽는 파이썬 기본 도구를 불러온다
+import sys
 
 # ==== 설정: 숫자만 바꾸면 된다 ====
 # 해외 공식 RSS에서 꺼내 볼 기사 개수
@@ -36,6 +38,13 @@ DATA_DIR = Path(__file__).parent / "data"
 KST = timezone(timedelta(hours=9))
 # 지금 시각(한국 시간)
 now = datetime.now(KST)
+# 날짜를 붙여 실행하면(예: python fetch_all.py 2026-11-24) 그 날짜판 후보를 모은다
+if len(sys.argv) > 1:
+    # 그 날짜의 밤 11시 59분 59초(한국 시간)를 기준 시각으로 삼는다
+    day_end = datetime.strptime(sys.argv[1], "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=KST)
+    # 오늘이거나 미래 날짜가 아니면(=지난 날짜면) 기준 시각을 그날 밤으로 바꾼다
+    if day_end < now:
+        now = day_end
 # 지금 시각에서 RECENT_DAYS일을 뺀 시각 = 이보다 오래된 기사는 버린다
 cutoff = now - timedelta(days=RECENT_DAYS)
 # 마지막 요약표에 쓸 기록을 모아두는 목록
@@ -70,6 +79,9 @@ for name, url, limit in SITES:
             published = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc).astimezone(KST)
             # 기준 시각보다 오래된 기사는 건너뛴다
             if published < cutoff:
+                continue
+            # 기준 시각보다 나중 기사도 건너뛴다 (지난 날짜판을 만들 때 그 뒤 기사가 섞이지 않게)
+            if published > now:
                 continue
             # 제목을 꺼낸다 (없으면 '제목 없음')
             title = entry.get("title", "제목 없음")
@@ -127,7 +139,7 @@ for name, result in summary:
 # ==== 파일로 저장하기 ====
 # data 폴더가 없으면 만든다 (이미 있으면 그냥 넘어간다)
 DATA_DIR.mkdir(exist_ok=True)
-# 오늘 날짜(한국 시간)로 파일 이름을 정한다. 예: candidates_2026-11-25.json
+# 기준 날짜(한국 시간, 보통 오늘)로 파일 이름을 정한다. 예: candidates_2026-11-25.json
 output_path = DATA_DIR / f"candidates_{now.strftime('%Y-%m-%d')}.json"
 # 파일을 쓰기 모드로 연다 (같은 이름 파일이 있으면 덮어쓴다)
 with open(output_path, "w", encoding="utf-8") as file:
