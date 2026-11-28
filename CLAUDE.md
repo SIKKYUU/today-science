@@ -75,8 +75,9 @@
 6. 사이트(https://sikkyuu.github.io/today-science/)에는 1~2분 뒤 반영된다고 알려준다.
 
 ## 자동 발행 (GitHub Actions)
-- .github/workflows/daily-news.yml 이 매일 한국 시간 오전 5시 17분에 위 "매일 발행"을 자동으로 한다.
-  - 정각은 GitHub가 혼잡해 예약이 버려질 수 있어 정각을 피했다. 예비 실행: 6시 43분, 8시 13분
+- .github/workflows/daily-news.yml 이 매일 한국 시간 0시 17분에 위 "매일 발행"을 자동으로 한다.
+  - 새 저장소라 GitHub 예약이 5~6시간씩 늦게 시작해서, 아침에 끝나도록 미리 당겨 뒀다.
+  - 정각은 GitHub가 혼잡해 예약이 버려질 수 있어 정각을 피했다. 예비 실행: 1시 43분, 3시 13분
     (그날 판이 이미 있으면 바로 끝나므로, 본 실행이 실패하거나 버려졌을 때만 일한다).
   - 날짜 확인 → (평일이면) python fetch_all.py 날짜 → Claude가 10개 작성 + 더 볼거리 6개 선택 → scripts/check_news.py 검사 → 커밋·push
   - 이미 data/news_날짜.json이 있는 날, 미래 날짜는 만들지 않는다.
